@@ -1,6 +1,8 @@
 import sys
 import json
 import re
+import ast
+import operator
 from typing import Optional, Callable, Dict, Any, List, Tuple
 import requests
 from pydantic import BaseModel, Field
@@ -87,9 +89,11 @@ class AnswerResult(BaseModel):
 
     @property
     def tray_badge(self) -> str:
-        if self.is_validated and (not self.is_multiple_choice or self.question_type in ["code", "theory", "numerical", "fill_blank"]):
+        if self.is_validated and (not self.is_multiple_choice or self.question_type in ["code", "theory", "numerical", "fill_blank", "true_false"]):
             if self.question_type == "code":
                 return "Code"
+            if self.question_type == "true_false":
+                return "T" if str(self.source_option_label).strip().lower().startswith(("t", "y")) else "F"
             if self.source_option_label and self.source_option_label not in ("Uncertain", "?", "!"):
                 return normalize_tray_badge(self.source_option_label, is_validated=True, is_multiple_choice=False)
             return "✓"
@@ -110,6 +114,119 @@ def extract_code_block(text: str) -> Tuple[Optional[str], str]:
         code = m.group(2).rstrip()
         return code, lang
     return None, ""
+
+ALLOWED_MATH_OPERATORS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+    ast.USub: operator.neg,
+    ast.UAdd: operator.pos,
+}
+
+def _safe_eval_ast(node: ast.AST):
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, (int, float)):
+            return node.value
+        raise ValueError("Non-numeric constant")
+    elif isinstance(node, ast.BinOp):
+        op_type = type(node.op)
+        if op_type not in ALLOWED_MATH_OPERATORS:
+            raise ValueError(f"Operator {op_type} not allowed")
+        left = _safe_eval_ast(node.left)
+        right = _safe_eval_ast(node.right)
+        return ALLOWED_MATH_OPERATORS[op_type](left, right)
+    elif isinstance(node, ast.UnaryOp):
+        op_type = type(node.op)
+        if op_type not in ALLOWED_MATH_OPERATORS:
+            raise ValueError(f"Operator {op_type} not allowed")
+        operand = _safe_eval_ast(node.operand)
+        return ALLOWED_MATH_OPERATORS[op_type](operand)
+    else:
+        raise ValueError(f"Node type {type(node)} not allowed")
+
+def try_solve_deterministic_math(text: str) -> Tuple[Optional[str], Optional[float]]:
+    """
+    Deterministically and safely solves standard arithmetic expressions and simple linear equations.
+    Only allows basic arithmetic AST evaluation (pure math, zero risk of code injection).
+    """
+    if not text:
+        return None, None
+
+    # 1. Linear equation: e.g. "3x + 15 = 42" or "2y - 6 = 12"
+    m_lin = re.search(r"\b([+-]?\s*\d*)\s*([a-zA-Z])\s*([+-]\s*\d+)\s*=\s*([+-]?\s*\d+)\b", text)
+    if m_lin:
+        a_str, var, b_str, c_str = m_lin.groups()
+        a_str = a_str.replace(" ", "")
+        if not a_str or a_str == "+":
+            a = 1.0
+        elif a_str == "-":
+            a = -1.0
+        else:
+            try:
+                a = float(a_str)
+            except ValueError:
+                a = 0.0
+        try:
+            b = float(b_str.replace(" ", ""))
+            c = float(c_str.replace(" ", ""))
+            if a != 0:
+                sol = (c - b) / a
+                sol_num = int(sol) if sol.is_integer() else round(sol, 4)
+                return f"{var} = {sol_num}", float(sol_num)
+        except Exception:
+            pass
+
+    # 2. Arithmetic expression: e.g. "25 * 4 - 30 / 2" or "17 % 5 + 2 * 3^2"
+    m_arith = re.search(r"(\d+(?:\.\d+)?(?:\s*[\+\-\*\/\%\^]\s*\d+(?:\.\d+)?)+)", text)
+    if m_arith:
+        expr = m_arith.group(1).strip()
+        expr = re.sub(r"\s+", "", expr)
+        expr = re.sub(r"[\+\-\*\/\%\^]+$", "", expr)
+        py_expr = expr.replace("^", "**")
+        try:
+            tree = ast.parse(py_expr, mode='eval')
+            val = _safe_eval_ast(tree.body)
+            if isinstance(val, (int, float)):
+                val_num = int(val) if float(val).is_integer() else round(float(val), 4)
+                return str(val_num), float(val_num)
+        except Exception:
+            pass
+
+    return None, None
+
+def classify_question_type(question_text: str, options: Optional[Dict[str, str]] = None) -> str:
+    """Classifies question into one of: 'mcq', 'true_false', 'numerical', 'programming', 'theory'."""
+    text_clean = (question_text or "").strip().lower()
+    
+    if options and len(options) >= 2:
+        opt_keys_clean = set(k.strip("().:- ").lower() for k in options.keys())
+        opt_vals_clean = set(v.strip("().:- ").lower() for v in options.values())
+        if opt_keys_clean.issubset({"true", "false", "t", "f"}) or opt_vals_clean.issubset({"true", "false", "t", "f"}):
+            return "true_false"
+        return "mcq"
+
+    # Open-ended
+    # 1. True / False indicators
+    if re.search(r"\b(?:true\s+or\s+false|state\s+whether\s+true|is\s+true\s+or\s+false|is\s+this\s+true)\b", text_clean):
+        return "true_false"
+    if text_clean.startswith("state whether") or text_clean.startswith("true or false:"):
+        return "true_false"
+
+    # 2. Programming / Code
+    code_indicators = ["def ", "class ", "int main", "public static", "select ", "console.log", "return ", "import ", "function ", "```", "len(", "dereferencing", "pointer"]
+    if any(ind in text_clean for ind in code_indicators):
+        return "programming"
+
+    # 3. Numerical / Math
+    math_indicators = ["solve for", "calculate", "evaluate", "derivative", "hit ratio", "amat", "what is the result of", "ip addresses", "usable hosts"]
+    if any(ind in text_clean for ind in math_indicators) or re.search(r"\d+\s*[\+\-\*\/\%\^]\s*\d+", text_clean) or re.search(r"\b[a-zA-Z]\s*=\s*\d+", text_clean):
+        return "numerical"
+
+    return "theory"
 
 
 class OllamaClient:
@@ -149,8 +266,11 @@ class OllamaClient:
         """
         selected_model = model or self.default_model
 
-        # Build structured prompt
-        prompt = self._construct_prompt(question_text, options, is_unlabelled_mcq=is_unlabelled_mcq)
+        # 1. Classify question type
+        q_type = classify_question_type(question_text, options)
+
+        # 2. Build structured, question-type-tailored prompt
+        prompt = self._construct_prompt(question_text, options, is_unlabelled_mcq=is_unlabelled_mcq, question_type=q_type)
 
         payload = {
             "model": selected_model,
@@ -189,7 +309,13 @@ class OllamaClient:
                 resp.raise_for_status()
                 full_response = resp.json().get("response", "")
 
-            result = self._parse_and_validate_response(full_response, options, is_unlabelled_mcq=is_unlabelled_mcq)
+            result = self._parse_and_validate_response(
+                full_response,
+                options,
+                is_unlabelled_mcq=is_unlabelled_mcq,
+                question_text=question_text,
+                question_type=q_type
+            )
             
             # Diagnostic logging (redacting screen content, logging structured tokens)
             try:
@@ -214,8 +340,11 @@ class OllamaClient:
         self,
         question: str,
         options: Optional[Dict[str, str]],
-        is_unlabelled_mcq: bool = False
+        is_unlabelled_mcq: bool = False,
+        question_type: Optional[str] = None
     ) -> str:
+        q_type = question_type or classify_question_type(question, options)
+
         if options and len(options) >= 2:
             options_list = ", ".join(options.keys())
             formatted_opts = []
@@ -225,6 +354,10 @@ class OllamaClient:
                 else:
                     formatted_opts.append(f"{k}) {v}")
             options_text = "Options:\n" + "\n".join(formatted_opts)
+
+            math_hint = ""
+            if any(sym in question for sym in ("^", "%", "*", "/", "+", "-")):
+                math_hint = "\nNote: In mathematical expressions, '^' denotes exponentiation (e.g. 3^2 = 9), NOT bitwise XOR. Follow standard mathematical order of operations (PEMDAS).\n"
 
             if is_unlabelled_mcq:
                 instruction_1 = f"1. On the very first line, state ONLY the single correct option number ({options_list}), formatted exactly as:\nANSWER: [OPTION_NUMBER]\n(For example: 'ANSWER: 1' or 'ANSWER: 2')"
@@ -238,30 +371,72 @@ Question:
 {question}
 
 {options_text}
-
+{math_hint}
 Instructions:
 {instruction_1}
 2. On line 2, provide a clear, concise 1-2 sentence explanation justifying why this option is correct.
 3. You MUST choose strictly from the provided options ({options_list}). Never invent or assume an option that is not listed.
 """
-        else:
+
+        # Non-MCQ / Open-ended prompt tailored by question type
+        if q_type == "true_false":
             return f"""You are Rubric-Local, a high-precision question-answering assistant.
-Analyze the following question and provide a direct, factual answer.
+Analyze the following statement and determine if it is True or False.
+
+Statement:
+{question}
+
+Instructions:
+1. On line 1, state ONLY 'True' or 'False'.
+2. On line 2, provide a concise 1-sentence explanation justifying why it is True or False.
+"""
+
+        elif q_type == "numerical":
+            return f"""You are Rubric-Local, a high-precision mathematician and computer engineer.
+Solve the following numerical problem carefully.
+
+Problem:
+{question}
+
+Note: In mathematical expressions, '^' denotes exponentiation (e.g. 3x^3 is 3 times x cubed; 3^2 = 9), NOT bitwise XOR. Follow standard mathematical order of operations (PEMDAS).
+
+Instructions:
+1. On line 1, state ONLY the final concise numerical answer or value (e.g. '20' or 'x = 9' or '31').
+2. On line 2, provide the concise step-by-step calculation or derivation.
+"""
+
+        elif q_type == "programming":
+            return f"""You are Rubric-Local, a high-precision software engineer.
+Analyze the following programming question.
 
 Question:
 {question}
 
 Instructions:
-1. On line 1, state the concise factual answer (under 10 words).
-2. On line 2, provide a 1-sentence explanation justifying why it is correct.
-3. Be direct and factual. Do not create multiple-choice option letters.
+1. If the question asks to write a function or code, provide clean, idiomatic code enclosed inside a markdown code block (```python ... ```).
+2. If the question asks for program output or evaluation, state the exact output on line 1.
+3. Provide a concise explanation on the next line.
+"""
+
+        else:  # theory
+            return f"""You are Rubric-Local, a high-precision technical instructor.
+Analyze the following technical question and provide a direct, factual explanation.
+
+Question:
+{question}
+
+Instructions:
+1. On line 1, state a direct, concise, factual explanation answering the question in 2-3 sentences.
+2. Directly mention the core architectural and technical terms (e.g. mechanisms, protocols, components, definitions).
 """
 
     def _parse_and_validate_response(
         self,
         text: str,
         options: Optional[Dict[str, str]],
-        is_unlabelled_mcq: bool = False
+        is_unlabelled_mcq: bool = False,
+        question_text: str = "",
+        question_type: Optional[str] = None
     ) -> AnswerResult:
         cleaned = text.strip()
         code_snip, code_lang = extract_code_block(cleaned)
@@ -289,6 +464,18 @@ Instructions:
 
         # CASE 1: Multiple Choice Question with extracted options
         if options and len(options) >= 2:
+            # Deterministic arithmetic cross-validation check for MCQs
+            det_math_ans, det_math_num = try_solve_deterministic_math(question_text)
+            opt_math_match = None
+            if det_math_ans or det_math_num is not None:
+                for k, v in options.items():
+                    v_clean = v.strip().lower()
+                    if (det_math_ans and det_math_ans.lower() == v_clean) or (
+                        det_math_num is not None and str(int(det_math_num) if float(det_math_num).is_integer() else det_math_num) == v_clean
+                    ):
+                        opt_math_match = k
+                        break
+
             # Build normalized lookup table: maps normalized keys to the exact source key
             lookup: Dict[str, str] = {}
             for k in options.keys():
@@ -360,6 +547,11 @@ Instructions:
                             matched_key = k
                             break
 
+            # Deterministic math match fallback: if model was unparseable or made arithmetic error, but math matched an option
+            if not matched_key and opt_math_match:
+                matched_key = opt_math_match
+                proposed = opt_math_match
+
             is_tf = bool(set(k.strip("().:- ").lower() for k in options.keys()).issubset({"true", "false", "t", "f"}))
             mcq_type = "true_false" if is_tf else "mcq"
 
@@ -372,6 +564,8 @@ Instructions:
                 explanation = "\n".join(explanation_lines).strip()
                 if not explanation:
                     explanation = f"Option {validated_label}: {opt_content}"
+                if opt_math_match and opt_math_match == validated_label:
+                    explanation = f"[Verified by deterministic calculation: {det_math_ans}]\n{explanation}"
 
                 return AnswerResult(
                     source_option_label=validated_label,
@@ -380,9 +574,9 @@ Instructions:
                     proposed_option=proposed,
                     is_validated=True,
                     validation_status="validated",
-                    confidence=0.95,
+                    confidence=0.98 if opt_math_match == validated_label else 0.95,
                     confidence_metadata={
-                        "score": 0.95,
+                        "score": 0.98 if opt_math_match == validated_label else 0.95,
                         "calibrated": False,
                         "validation_type": "exact_option_match",
                         "matched_key": validated_label,
@@ -436,19 +630,32 @@ Instructions:
             explanation = "\n".join(lines[1:]).strip() if len(lines) > 1 else short_ans
             
             # Detect question type
+            m_tf = re.match(r"^(true|false|yes|no)\b", short_ans, re.IGNORECASE)
             if code_snip:
                 q_type = "code"
-            elif short_ans.lower() in ["true", "false", "yes", "no"]:
+                source_label = "Code"
+            elif m_tf or question_type == "true_false":
                 q_type = "true_false"
-            elif re.search(r"^\s*([a-zA-Z]\s*=\s*|[-+]?\d*\.?\d+)", short_ans):
+                val_tf = "True" if ((m_tf and m_tf.group(1).lower() in ("true", "yes")) or ("true" in short_ans.lower() and "false" not in short_ans.lower())) else "False"
+                short_ans = val_tf
+                source_label = val_tf
+            elif question_type == "numerical" or re.search(r"^\s*([a-zA-Z]\s*=\s*|[-+]?\d*\.?\d+)", short_ans):
                 q_type = "numerical"
+                source_label = "✓"
+                # Check deterministic math calculation
+                det_ans, det_num = try_solve_deterministic_math(question_text)
+                if det_ans:
+                    short_ans = det_ans
+                    explanation = f"Calculated: {det_ans}\n{explanation}"
             elif "fill in" in cleaned.lower() or "blank" in cleaned.lower():
                 q_type = "fill_blank"
+                source_label = "✓"
             else:
                 q_type = "theory"
+                source_label = "✓"
 
             return AnswerResult(
-                source_option_label="✓",
+                source_option_label=source_label,
                 option_text=short_ans[:100],
                 answer_option=short_ans[:100],
                 proposed_option=short_ans[:100],

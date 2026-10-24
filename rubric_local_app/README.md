@@ -1,240 +1,323 @@
-# Rubric-Local
+# Ghostline
 
-**100% Offline, Privacy-First On-Device AI Question Recognition & Solver Engine for Windows 11 & 10.**
+**100% Offline, Privacy-First On-Device AI Question Recognition & Reasoning Engine for Windows 10 & 11.**
 
-Rubric-Local is a native Windows desktop application that captures on-screen multiple-choice questions, recognizes question structure with sub-second Windows Media OCR, performs local grounded reasoning via Ollama, and signals validated answers through a floating HUD, dynamic system tray badge, or keyboard Caps Lock pulses.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6.svg?logo=windows)](https://microsoft.com/windows)
+[![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python)](https://python.org)
+[![Inference: Ollama](https://img.shields.io/badge/Inference-Ollama%20(Local)-white.svg?logo=ollama)](https://ollama.com)
+[![Accuracy: 90.0%](https://img.shields.io/badge/Accuracy-90.0%25%20Verified-brightgreen.svg)](docs/ACCURACY.md)
+[![Tests: 103 Passed](https://img.shields.io/badge/Tests-103%2F103%20Passed-success.svg)](tests/)
 
-No cloud APIs. No telemetry. No accounts or subscriptions. Zero network requests leave your machine.
+Ghostline (formerly Rubric-Local) is a native Windows desktop application that captures on-screen assessment questions, parses question structure in under 40 milliseconds using native Windows Media OCR, performs local grounded reasoning via Ollama, and signals validated answers through a floating HUD, dynamic system tray badge, or keyboard Caps Lock pulses.
+
+Zero cloud APIs. Zero telemetry. No accounts, API keys, or subscriptions. All processing remains strictly on your machine.
 
 ---
 
-## Architecture Overview
+## 1. Problem Statement & Intended Use
+
+Standard cloud-based AI tools require transmitting full screen captures or text to remote servers, violating data privacy, incurring recurring API costs, introducing latency, and risking account telemetry leaks.
+
+Ghostline solves this by running an entirely local, self-contained pipeline on Windows 10 and 11. It is designed for:
+- **Research & Academic Study:** Instant local synthesis and verified explanations of complex technical concepts, theory questions, and mathematical formulas.
+- **Offline Assessment Practice:** Practicing multiple-choice exams and technical programming challenges without internet access.
+- **Privacy-Sensitive Workflows:** Analyzing on-screen documents and exercises in air-gapped or confidential enterprise environments where cloud transmission is strictly prohibited.
+
+---
+
+## 2. Features & Current Limitations
+
+### Core Capabilities
+- **Sub-Second Native OCR:** Bridges directly to native `Windows.Media.Ocr.OcrEngine` (UWP/WinRT APIs) via `win_ocr.exe`. Eliminates heavy Tesseract dependencies and executes in under 40ms without console window flash.
+- **Grounded Local AI Inference:** Interfaces directly with local Ollama daemon (`127.0.0.1:11434`), supporting `phi3:mini` (3.8B, recommended default) and `qwen2.5:0.5b` (0.5B, low-VRAM fallback).
+- **Deterministic Math AST Solver:** Parses arithmetic expressions (`25 * 4 - 30 / 2`, `17 % 5 + 2 * 3^2`) and linear equations (`3x + 15 = 42`) with 100% mathematical precision using restricted Python AST evaluation.
+- **Two-Pass Hallucination Defense:** Validates LLM proposed options strictly against on-screen choices before signaling. Rejects ungrounded guesses and ramblings.
+- **Floating Glass HUD Overlay:** Dark translucent glassmorphic HUD window (`WS_EX_TOPMOST`, `WS_EX_NOACTIVATE`) that never steals keyboard focus. Supports dragging, scrollable explanations, syntax-highlighted code, and one-click copying.
+- **Dynamic System Tray Badges:** 32x32 pixel PIL icons dynamically rendering validated option glyphs (`A-D`, `1-9`, `T`/`F`, `Code`, `✓`, `?`, `!`).
+- **Caps Lock Pulse Signaling:** Win32 keyboard pulse signaling with automatic atomic state restoration to preserve physical keyboard states.
+- **Automated Verification:** 15 modular test suites with 103 unit and regression tests, plus an empirical 50-question evaluation benchmark measuring 90.0% overall accuracy.
+
+### Current Limitations
+- **Platform Specific:** Windows 10 (64-bit, 20H2+) and Windows 11 only (utilizes Win32 DPI hooks and Windows Media OCR). Linux and macOS are not supported.
+- **Complex Multivariable Calculus:** Higher-order calculus problems where symbolic AST evaluation is not applicable rely on generative LLM reasoning.
+- **Extreme Background Clutter:** Capturing heavily cluttered screen regions where question text collides with surrounding webpage ads or UI elements may require adjusting the capture position.
+
+---
+
+## 3. Visual Interface & Screenshots
 
 ```
- [ Screen Cursor ]
-        │
-        ▼ (Alt + /)
- [ DPI-Aware Win32 Capture ] (Captures 700x450px region around mouse)
-        │
-        ▼
- [ Windows Native OCR ] (Windows.Media.Ocr / win_ocr.exe ~35ms)
-        │
-        ▼
- [ Question Structure Parser ] (Distinguishes question text from options A-D/1-4)
-        │
-        ▼
- [ Local Ollama AI Engine ] (phi3:mini / qwen2.5 / llama3.2 on local GPU/CPU)
-        │
-        ▼
- [ Two-Pass Answer Validator ] (Rejects hallucinations, unlisted choices, ramblings)
-        │
-   ┌────┴─────────────────────────────┬───────────────────────────┐
-   ▼                                  ▼                           ▼
-[ Floating Glass HUD ]      [ Dynamic Tray Badge ]     [ Caps Lock Pulses ]
-(Option + Full Reasoning)   (A/B/C/D/?/! glyphs)       (1=A, 2=B, 3=C, 4=D)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             GHOSTLINE INTERFACE                             │
+├──────────────────────┬──────────────────────────────────────────────────────┤
+│  ◈ GHOSTLINE         │  System Ready                              [Alt + /] │
+│                      ├──────────────────────────────────────────────────────┤
+│  ⚡ Dashboard        │  [ Offline Engine ] [ Local Ollama ] [ Win OCR ]     │
+│  🎯 Answer & Capture │                                                      │
+│  📜 History          │  ┌─────────────────────────────────────────────────┐ │
+│  ⚙️  Settings         │  │ ⚡ Solved (B)                                    │ │
+│  🩺 Diagnostics      │  │ Option B: Generational cyclic garbage collector │ │
+│  ℹ️  About            │  │ Confidence: 98%  •  Total: 1.4s • Model: phi3    │ │
+│                      │  └─────────────────────────────────────────────────┘ │
+│  ● 100% Offline      │  Recent Activity & Step-by-Step Telemetry...         │
+└──────────────────────┴──────────────────────────────────────────────────────┘
 ```
 
+> _[Screenshot Placeholder: Ghostline Main Control Dashboard]_  
+> `![Ghostline Dashboard](docs/assets/dashboard_placeholder.png)`
+
+> _[Screenshot Placeholder: Floating Transparent Glass HUD with Syntax-Highlighted Python Code]_  
+> `![Floating Glass HUD](docs/assets/hud_placeholder.png)`
+
+> _[GIF Placeholder: Hover-to-Answer and Alt+/ Screen Solve Workflow]_  
+> `![Solve Workflow Demo](docs/assets/workflow_demo_placeholder.gif)`
+
 ---
 
-## User Interface
-
-Rubric-Local features a restrained Windows minimalist dark design language (Zinc/Slate surfaces with subtle 1px dividers and a focused Sky Cyan accent):
+## 4. Architecture Overview & Data Flow
 
 ```
-┌──────────────────────┬────────────────────────────────────────────────────────────┐
-│  ◈ RUBRIC-LOCAL      │  System Ready                                    [Alt + /] │
-│                      ├────────────────────────────────────────────────────────────┤
-│  ⚡ Dashboard        │  [ Offline Engine ]  [ Local Ollama ]  [ Win OCR ] [ HUD ] │
-│  🎯 Answer & Capture │                                                            │
-│  📜 History          │  ┌───────────────────────────────────────────────────────┐ │
-│  ⚙️  Settings         │  │ ⚡ Solved (B)                                          │ │
-│  🪄 Setup Wizard     │  │ Option B: Photosynthesis                              │ │
-│  🩺 Diagnostics      │  │ Confidence: 97%  •  Total: 269ms                      │ │
-│  ℹ️  About            │  └───────────────────────────────────────────────────────┘ │
-│                      │  Recent Activity & Log Telemetry...                        │
-│  ● Engine Ready      │                                                            │
-└──────────────────────┴────────────────────────────────────────────────────────────┘
+[ Screen Cursor ] ──(Alt + / or Hover)──▶ [ DPI-Aware Win32 Screen Capture ]
+                                                        │
+                                                        ▼ (700x450 RGB Bitmap)
+                                          [ Native Windows.Media.Ocr Engine ]
+                                                        │
+                                                        ▼ (Words & Bounding Boxes)
+                                          [ Structure & Option Separator ]
+                                                        │
+                         ┌──────────────────────────────┴──────────────────────────────┐
+                         ▼                                                             ▼
+              [ Deterministic Math AST ]                                    [ Type-Aware Prompt Builder ]
+                         │                                                             │
+                         │                                                             ▼
+                         │                                              [ Local Ollama (127.0.0.1:11434) ]
+                         │                                                             │
+                         └──────────────────────────────┬──────────────────────────────┘
+                                                        ▼
+                                          [ Two-Pass Schema Validator ]
+                                                        │
+                        ┌───────────────────────────────┼───────────────────────────────┐
+                        ▼                               ▼                               ▼
+             [ Floating Glass HUD ]           [ System Tray Glyph ]          [ Caps Lock Pulses ]
+             (Full formatted answer)          (Short option badge)           (1=A, 2=B, 3=C, 4=D)
 ```
 
-1. **Dashboard:** Readiness telemetry, one-click manual capture trigger, HUD toggles, and recent queries.
-2. **Answer & Capture Monitor:** Step-by-step pipeline tracker (Capture -> OCR -> LLM -> Validation), prominent answer glyph, confidence score, timing breakdown, and copyable explanations.
-3. **Question History:** Local searchable JSONL audit log with query filtering and telemetry inspection.
-4. **Settings:** In-app selection of Ollama model, server endpoint, capture dimensions, indicator modes, and customizable Caps Lock pulse timing.
-5. **Setup Wizard:** 5-step first-run onboarding with dependency verification, live Ollama probe, real model download progress, and benchmark inference.
-6. **Diagnostics:** Live system telemetry (PID, GPU, paths, logs) and exportable Markdown report generator.
-7. **About:** Privacy manifesto, zero-socket architecture verification, and keyboard shortcuts.
+For complete technical details, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
-## System Requirements
+## 5. Technology Stack & OS Compatibility
 
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| **OS** | Windows 10 (64-bit, 20H2+) | Windows 11 (64-bit, 22H2+) |
-| **RAM** | 8 GB | 16 GB+ |
-| **GPU** | CPU Only (avx2) | NVIDIA RTX (4GB+ VRAM, e.g. RTX 3050/4050+) |
-| **Storage** | 500 MB (app) + 2.5 GB (model) | 5 GB SSD free space |
-| **Ollama** | v0.1.30+ | Latest from [ollama.com](https://ollama.com) |
-
----
-
-## Quick Start (For Users)
-
-### Option A: Portable Zero-Setup ZIP (Recommended)
-1. Download `Rubric-Local-v1.0.0-win64-portable.zip` from [Releases](../../releases).
-2. Extract the ZIP anywhere on your PC (e.g. `Downloads` or `Desktop`).
-3. Ensure [Ollama](https://ollama.com) is installed and running (`ollama pull phi3:mini`).
-4. Double-click `Run-Rubric-Local.bat`.
-
-### Option B: Windows Installer
-1. Download and run `install.bat` (or right-click `installer.ps1` -> *Run with PowerShell*).
-2. It installs cleanly into `%LOCALAPPDATA%\Programs\Rubric-Local`, creates Start Menu and Desktop shortcuts, and registers an uninstaller in Windows Settings.
+- **Language & Runtime:** Python 3.10, 3.11, or 3.12 (64-bit).
+- **GUI Framework:** Custom Tkinter runtime with Win32 window attribute extensions (`ctypes`, `pywin32`).
+- **OCR Engine:** C# standalone executable (`bin/win_ocr.exe`) compiled against native `Windows.Media.Ocr` (zero external DLLs).
+- **Inference Runtime:** Local [Ollama](https://ollama.com) daemon.
+- **Operating Systems:**
+  - Windows 11 (64-bit, all builds) — *Fully Supported*
+  - Windows 10 (64-bit, Version 20H2 or later) — *Fully Supported*
+  - macOS / Linux — *Unsupported (native Win32/UWP dependencies)*
 
 ---
 
-## Quick Start (For Developers)
+## 6. Prerequisites
 
+1. **Operating System:** Windows 10 (20H2+) or Windows 11 (64-bit).
+2. **Python:** Version 3.10 to 3.12 installed from [python.org](https://www.python.org/downloads/) (ensure *"Add python.exe to PATH"* is checked during installation).
+3. **Ollama:** Download and install from [ollama.com](https://ollama.com).
+4. **Local AI Model:** At least one locally runnable model pulled via Ollama (recommended: `phi3:mini`).
+5. **Windows OCR Pack:** Windows native English OCR language component (installed by default on English Windows; verify in `Settings > Time & Language > Language`).
+
+---
+
+## 7. Exact Installation Steps (Windows)
+
+### Step 1: Clone the Repository
+Open PowerShell or Windows Terminal:
 ```powershell
-# 1. Clone repository
-git clone https://github.com/your-username/rubric-local.git
-cd rubric-local/rubric_local_app
-
-# 2. Run automated setup & verification
-.\setup.ps1
-
-# 3. Launch in Developer Mode (interactive console)
-.\run_dev.bat
+git clone https://github.com/sameerpasha-1239/Ghostline.git
+cd Ghostline/rubric_local_app
 ```
 
-To run the complete offline verification regression suite:
+### Step 2: Create Virtual Environment & Install Dependencies
+```powershell
+# Create isolated virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+.\.venv\Scripts\Activate.ps1
+
+# Upgrade pip and install pinned requirements
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### Step 3: Verify Native OCR Binary
+Ghostline includes a pre-compiled `bin/win_ocr.exe`. Verify it executes:
+```powershell
+.\bin\win_ocr.exe --help
+```
+If the binary was deleted or blocked, recompile it from the provided C# source in 2 seconds using the built-in Windows .NET compiler:
+```cmd
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:exe /out:bin\win_ocr.exe bin\src\WinOcr.cs
+```
+
+### Step 4: Install and Start Ollama
+1. Download Ollama from [ollama.com/download/windows](https://ollama.com/download/windows) and run the installer.
+2. In PowerShell, pull the recommended 3.8B model:
+   ```powershell
+   ollama pull phi3:mini
+   ```
+3. *(Optional for low-VRAM laptops)* Pull the 0.5B fallback model:
+   ```powershell
+   ollama pull qwen2.5:0.5b
+   ```
+4. Verify the model is installed locally:
+   ```powershell
+   ollama list
+   ```
+
+---
+
+## 8. Launching the Application
+
+### Method A: Launch with Terminal / Dev Output
+```powershell
+python -m rubric_local.app
+```
+or double-click `run_dev.bat`.
+
+### Method B: Launch in Background / Quiet Mode
+```powershell
+pythonw -m rubric_local.app
+```
+or double-click `run.bat`.
+
+### Method C: Headless Diagnostic CLI
+```powershell
+python -m rubric_local.cli diagnose
+```
+
+---
+
+## 9. First-Run Setup & Usage Guide
+
+1. **System Tray Initialization:** Upon launch, Ghostline places a dark status icon in your Windows notification tray. Left-click to open the dashboard; right-click for the context menu.
+2. **Solving a Question:**
+   - Move your mouse pointer over any multiple-choice or technical question on your screen.
+   - Press **`Alt + /`** (or hover still for 800ms if hover-to-answer is enabled).
+   - Ghostline captures the 700x450px region, parses options, runs local inference, and verifies the solution.
+3. **Reading the Answer:**
+   - **Floating HUD:** A translucent glass HUD appears near your cursor showing the validated option, direct answer, and complete reasoning.
+   - **Code Blocks:** For programming questions, code is formatted with syntax highlighting and includes a *"Copy Code"* button.
+   - **Tray Icon:** The tray icon displays the single option label (`A`, `B`, `1`, `2`, `T`, `F`, `Code`).
+   - **Caps Lock:** If enabled, Caps Lock flashes in pulses (`1` pulse for A, `2` for B) and immediately reverts to its original physical state.
+4. **Controlling the HUD:**
+   - Press **`Ctrl + Shift + H`** to toggle HUD visibility.
+   - Drag the HUD header to reposition.
+   - Click `_` to minimize to a compact pill badge.
+   - Click `✕` to dismiss.
+5. **Reviewing Audit History:** Open the Main Window and navigate to the **History** tab to search and inspect all previous solves stored in `%APPDATA%\RubricLocal\history.jsonl`.
+
+---
+
+## 10. Configuration Reference
+
+Settings are stored in `%APPDATA%\RubricLocal\config.json` and can be adjusted via the in-app Settings UI or edited directly:
+
+| Key | Default | Valid Range / Options | Description |
+|:---|:---:|:---:|:---|
+| `ollama_model` | `"phi3:mini"` | Any installed Ollama model | Active inference model name |
+| `ollama_base_url` | `"http://127.0.0.1:11434"` | Valid HTTP localhost URL | Local Ollama REST endpoint |
+| `capture_hotkey` | `"Alt+/"` | Valid key combination string | Global screen capture shortcut |
+| `hud_toggle_hotkey` | `"Ctrl+Shift+H"` | Valid key combination string | Global HUD visibility toggle shortcut |
+| `capture_width` | `700` | `400` – `1600` | Width of captured screen region (pixels) |
+| `capture_height` | `450` | `300` – `1200` | Height of captured screen region (pixels) |
+| `hud_opacity` | `0.92` | `0.30` – `1.00` | Floating HUD glass translucency level |
+| `hud_pinned` | `true` | `true` / `false` | Keep HUD above normal desktop windows |
+| `enable_hover_answer` | `false` | `true` / `false` | Trigger capture automatically on cursor stillness |
+| `hover_dwell_time_ms` | `800` | `300` – `3000` | Milliseconds of stillness required for hover trigger |
+| `enable_caps_indicator` | `true` | `true` / `false` | Enable pulsed Caps Lock keyboard signaling |
+| `caps_pulse_duration_ms` | `60` | `20` – `200` | Duration of each individual Caps Lock flash (ms) |
+| `caps_pulse_gap_ms` | `100` | `30` – `300` | Gap between multiple Caps Lock flashes (ms) |
+
+---
+
+## 11. Troubleshooting
+
+| Symptom | Cause | Resolution |
+|:---|:---|:---|
+| **Ollama Disconnected** | Ollama daemon is not running. | Run `ollama serve` in a terminal; verify `http://127.0.0.1:11434/api/tags` loads. |
+| **Model Not Found** | Required model has not been downloaded. | Run `ollama pull phi3:mini`. |
+| **Native OCR binary error** | `win_ocr.exe` missing or blocked by antivirus. | Compile `bin/src/WinOcr.cs` using Windows `csc.exe` (see Step 3 above). |
+| **Hotkey does not trigger** | Another application claims `Alt + /`. | Change `capture_hotkey` to `Ctrl+Shift+F` in Settings. |
+| **HUD off-screen** | Secondary monitor disconnected. | Press `Ctrl + Shift + H` or reset `hud_x` / `hud_y` to 100 in `config.json`. |
+| **Caps Lock does not flash** | Signaling disabled or anti-cheat hook. | Ensure `enable_caps_indicator` is `true` in Settings; use HUD or tray instead. |
+
+For advanced diagnostic steps, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+
+---
+
+## 12. Accuracy Evaluation & Benchmark Results
+
+Ghostline includes an automated local evaluation framework ([evaluation/evaluator.py](evaluation/evaluator.py)) running against 50 authored technical assessment questions across 7 categories:
+
+### Measured Results (`phi3:mini`)
+
+| Evaluation Set | Questions | Baseline Accuracy | Post-Improvement Accuracy | Net Gain | Average Latency |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| **Development Set** | 30 | 20 / 30 (66.7%) | **26 / 30 (86.7%)** | **+20.0%** | 3.47 s / query |
+| **Held-Out Test Set** | 20 | 15 / 20 (75.0%) | **19 / 20 (95.0%)** | **+20.0%** | 2.39 s / query |
+| **Combined Overall** | **50** | **35 / 50 (70.0%)** | **45 / 50 (90.0%)** | **+20.0%** | **2.93 s / query** |
+
+### Per-Category Performance (Combined 50 Questions)
+- **mcq_unlabelled:** 7 / 7 (**100.0%**)
+- **true_false:** 5 / 5 (**100.0%**)
+- **theory:** 7 / 7 (**100.0%**)
+- **mcq_labelled:** 9 / 10 (**90.0%**)
+- **numerical:** 6 / 7 (**85.7%**)
+- **programming:** 6 / 7 (**85.7%**)
+- **malformed_ocr:** 5 / 7 (**71.4%**)
+
+To reproduce benchmarks locally:
+```powershell
+python evaluation/evaluator.py --dataset dev
+python evaluation/evaluator.py --dataset heldout
+```
+Full methodology and error analysis are documented in [docs/ACCURACY.md](docs/ACCURACY.md).
+
+---
+
+## 13. Privacy, Security & Responsible Use
+
+- **100% Offline Integrity:** Zero external API calls, tracking cookies, user telemetry, or remote analytics.
+- **Ephemeral Screen Buffer:** Screen captures exist only in system RAM for the duration of OCR recognition and are purged immediately.
+- **Local Isolation:** All configuration and history reside strictly inside `%APPDATA%\RubricLocal`.
+- **Responsible Use Disclaimer:** Ghostline is intended solely for personal study, technical tutoring, and accessibility assistance. Users are responsible for adhering to all institutional academic integrity and testing platform policies.
+
+For vulnerability reporting, see [SECURITY.md](SECURITY.md).
+
+---
+
+## 14. Testing & Development
+
+Run all 103 automated tests across the 15 test suites:
 ```powershell
 python tests/run_all_tests.py
 ```
 
----
-
-## Recommended Models by Hardware Tier
-
-| Hardware Tier | Model | RAM/VRAM | Avg Latency | Reasoning Quality |
-|---------------|-------|----------|-------------|-------------------|
-| **Ultra-Light / CPU** | `qwen2.5:0.5b` | ~600 MB | ~150 ms | Fast factual MCQ |
-| **Balanced (Recommended)** | `phi3:mini` (3.8B) | ~2.3 GB | ~280 ms | Exceptional math & logic |
-| **High Accuracy** | `llama3.2:3b` | ~2.0 GB | ~290 ms | High vocabulary & science |
-| **Pro / 8GB+ VRAM** | `qwen2.5:7b` | ~4.7 GB | ~600 ms | Complex domain knowledge |
-
-Pull any model via terminal:
-```bash
-ollama pull phi3:mini
+Run specific test modules:
+```powershell
+python -m unittest tests.test_type_aware_presentation
+python -m unittest tests.test_hover_and_hud
+python -m unittest tests.test_caps_lock
 ```
 
 ---
 
-## Floating AI HUD Overlay
+## 15. Contributing & License
 
-Rubric-Local includes a borderless, translucent dark floating HUD with subtle emerald green stealth accents (`#10b981` / `#064e3b` / `#0f1117`).
-
-### Key Capabilities
-- **Focus-Free Operation (`WS_EX_NOACTIVATE`):** Floating HUD stays above normal windows (`-topmost`) without stealing keyboard or window focus (`0x08000000`). Clicking controls or viewing answers never disrupts your active typing session or application.
-- **Compact vs Expanded Modes:** Click `—` to collapse into a minimal pill indicator (title & badge), or `⤢` to expand to full reasoning and syntax-highlighted code.
-- **Position Pinning (`📌` / `📍`):** Pin the HUD to lock it at fixed screen coordinates and prevent accidental drags. Position is saved persistently.
-- **Syntax-Highlighted Code Blocks:** For programming questions, code blocks are rendered in a dedicated monospace container with syntax coloring (keywords in emerald green, strings in amber, comments in slate, types in sky blue), horizontal and vertical scrollbars, and a one-click **"💻 Copy Code"** button.
-- **One-Click Answer Copying:** Click **"📋 Copy Answer"** to copy the formatted answer, badge, explanation, and code directly to your clipboard.
-- **Dismiss & Auto-Dismiss:** Press `Esc` or click `×` to hide. Optionally configure an auto-dismiss timeout in Settings.
-
----
-
-## Automatic Hover-to-Answer Engine
-
-In addition to manual triggering via `Alt + /`, Rubric-Local features an autonomous hover-detection engine:
-
-- **Stationary Detection:** Monitors cursor coordinates at 20Hz. When the mouse remains stationary within a configurable jitter radius (default: 15px) for longer than the hover delay (default: 800ms), screen capture and OCR are automatically initiated.
-- **Duplicate-Question Filter (LRU Cache):** Uses normalized alphanumeric SHA-256 fingerprinting to prevent re-solving unchanged questions when the mouse hovers nearby. Cached questions are not re-submitted to the local LLM.
-- **Smart Window Exclusion:** The cursor is ignored when resting over the floating HUD itself or the Rubric-Local application window, preventing self-capture loops.
-- **Post-Solve Cooldown:** Enforces a configurable cooldown period (default: 3.0s) after each solve before another hover can trigger.
-- **Pause/Resume Controls:** Toggle hover detection on the fly via the HUD (`⏸` / `▶`), system tray context menu, or Settings.
-
----
-
-## Windows Screen-Capture Privacy Exclusion
-
-Rubric-Local leverages the native Windows Window Display Affinity API (`SetWindowDisplayAffinity`) to prevent the floating HUD from being captured during screen recordings, screenshots, and meeting shares:
-
-| API Affinity Level | Value | Target Platforms | Behavior |
-|--------------------|-------|------------------|----------|
-| `WDA_EXCLUDEFROMCAPTURE` | `0x00000011` | Windows 10 Version 2004+ (Build 19041+) and Windows 11 | Window is completely invisible in desktop captures (BitBlt, PrintWindow, ImageGrab, screen recorders). |
-| `WDA_MONITOR` (Fallback) | `0x00000001` | Windows 10 (Build 10240+) and older | Window rendered only on its physical monitor; capture software sees black rect or passes through. |
-| `WDA_NONE` | `0x00000000` | All Windows versions | Normal window display; included in all captures. |
-
-> [!NOTE]
-> Capture exclusion is an explicit privacy feature. While supported natively by Windows 10 (2004+) and Windows 11, hardware capture cards (HDMI passthrough) or specialized kernel-level capture drivers may bypass display affinity. Rubric-Local falls back gracefully on older Windows builds.
-
----
-
-## Configuration Reference
-
-All settings can be modified via the Settings tab in the application or by editing `%APPDATA%\RubricLocal\config.json`:
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `hud_enabled` | `true` | Enable or disable the floating HUD overlay |
-| `hud_always_on_top` | `true` | Keep HUD above normal windows without stealing focus |
-| `hud_pinned` | `false` | Pin HUD to fixed screen coordinates |
-| `hud_opacity` | `0.92` | HUD translucency level (0.4 to 1.0) |
-| `exclude_from_capture` | `true` | Apply `WDA_EXCLUDEFROMCAPTURE` privacy affinity |
-| `answer_timeout_sec` | `0` | Auto-dismiss timer in seconds (0 = stay until dismissed) |
-| `hover_to_answer_enabled` | `false` | Enable automatic hover question detection |
-| `hover_delay_ms` | `800` | Stationary hover threshold before capture (ms) |
-| `hover_cooldown_sec` | `3.0` | Cooldown period between automatic solves (s) |
-| `hover_movement_threshold_px` | `15` | Cursor jitter movement tolerance (px) |
-| `is_hover_paused` | `false` | Pause state for hover-to-answer |
-| `caps_lock_indicator` | `false` | Enable hardware Caps Lock LED signaling |
-| `hotkey` | `alt+/` | Global manual solve hotkey |
-
----
-
-## Hotkeys & Controls
-
-- `Alt + /` — Solve question under mouse cursor.
-- `Hover mouse cursor for 800ms` — Automatically solve question under cursor (when Hover-to-Answer is enabled).
-- `Escape` (on HUD) — Dismiss floating HUD overlay.
-- `Double-click tray icon` — Show/restore Rubric-Local desktop window.
-- `Right-click tray icon`:
-  - **Open Rubric-Local** — Focus main window
-  - **Solve Under Cursor (Alt+/)** — Trigger manual capture
-  - **Show/Hide Mini HUD** — Toggle floating HUD visibility
-  - **Pause/Resume Hover-to-Answer** — Toggle automatic hover detection
-  - **Settings** — Open configuration screen
-  - **Quit** — Terminate application cleanly
-
----
-
-## Troubleshooting & FAQ
-
-1. **HUD is not appearing on screen:**
-   - Verify that **Enable Floating AI HUD Overlay** and **Show floating HUD automatically during solve** are checked in Settings.
-   - If previously moved off-screen, click **Pin HUD** or reset `hud_pos_x`/`hud_pos_y` in `config.json`.
-2. **Hover detection is not triggering:**
-   - Ensure **Enable Automatic Hover-to-Answer** is checked in Settings.
-   - Verify that hover detection is not paused (`⏸` symbol on HUD or status in Settings).
-   - Keep the mouse cursor stationary over the question text for at least 800ms.
-   - If the exact same question was recently solved, it is cached to prevent redundant inference. Move to a new question or press `Alt + /` to force re-solve.
-3. **Capture exclusion status shows unsupported:**
-   - `WDA_EXCLUDEFROMCAPTURE` requires Windows 10 Version 2004 (Build 19041) or higher. On older builds, `WDA_MONITOR` is used as fallback.
-4. **Global hotkey `Alt + /` is not responding:**
-   - If another application has already registered `Alt + /`, Rubric-Local will log a warning (Win32 Error 1409). You can solve questions via the tray menu, hover detection, or UI button.
-
----
-
-## Privacy & Security Manifesto
-
-1. **Zero Outbound Sockets:** Rubric-Local connects exclusively to `127.0.0.1:11434` (local Ollama loopback). No external HTTP, telemetry, or analytics requests are ever made.
-2. **Local Data Storage:** All configuration and query history remain strictly on your device inside `%APPDATA%\RubricLocal`.
-3. **No Continuous Screen Recording:** Rubric-Local captures an isolated frame around the cursor only when stationary hover conditions are met or `Alt + /` is pressed.
-4. **Capture Exclusion:** Keeps AI reasoning private from screen-sharing tools.
-
----
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
+- Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) before submitting pull requests.
+- Track verified changes in [CHANGELOG.md](CHANGELOG.md).
+- Distributed under the **MIT License**. See [LICENSE](LICENSE) for full legal text.
+- Target Release Repository: [https://github.com/sameerpasha-1239/Ghostline](https://github.com/sameerpasha-1239/Ghostline)

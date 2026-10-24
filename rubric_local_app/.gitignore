@@ -35,9 +35,13 @@ ENV/
 config.json
 history.jsonl
 
+# Scratch & temporary test scripts
+scratch/
+
 # IDE & OS files
 .vscode/
 .idea/
 Thumbs.db
 Desktop.ini
 .DS_Store
+

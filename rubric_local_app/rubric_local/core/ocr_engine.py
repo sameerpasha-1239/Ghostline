@@ -205,10 +205,11 @@ def parse_question_structure(ocr_data: Dict) -> ParsedQuestion:
     lines = []
     inline_split_regex = re.compile(
         r"\s+(?=(?:"
-        r"[\(\[]?(?:[A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})[\)\]\-]\s+"
-        r"|\((?:[A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\)\s+"
-        r"|\[(?:[A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\]\s+"
-        r"|(?:[A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})[\.\:](?!\d)\s+"
+        r"[\(\[]\s*(?:[A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\s*[\)\]\-]\s+"
+        r"|\(\s*(?:[A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\s*\)\s+"
+        r"|\[\s*(?:[A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\s*\]\s+"
+        r"|(?:[A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\s*[\.\:](?!\d)\s+"
+        r"|(?:[A-Za-z]|[1-9]\d?)\s*[\)\]\-]\s+"
         r"))"
     )
     for line in raw_lines:
@@ -220,12 +221,14 @@ def parse_question_structure(ocr_data: Dict) -> ParsedQuestion:
 
     # Option prefix regex:
     # Delimiters: ')', ']', '-', or '.' / ':' NOT followed by a digit (prevent matching decimals e.g. 3.14 or ratios 1:2)
+    # Supports optional spaces inside brackets/parentheses and before delimiters (e.g. "A )", "[ B ]", "1 .", "A :")
     opt_prefix_regex = re.compile(
         r"^(?:"
-        r"[\(\[]?([A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})[\)\]\-]\s*"
-        r"|\(([A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\)\s*"
-        r"|\[([A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\]\s*"
-        r"|([A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})[\.\:](?!\d)\s*"
+        r"[\(\[]\s*([A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\s*[\)\]\-]\s*"
+        r"|\(\s*([A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\s*\)\s*"
+        r"|\[\s*([A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\s*\]\s*"
+        r"|([A-Za-z]|[1-9]\d?|[ivxIVX]{1,4})\s*[\.\:](?!\d)\s*"
+        r"|([A-Za-z]|[1-9]\d?)\s*[\)\]\-]\s*"
         r")(.*)$"
     )
     
@@ -235,8 +238,8 @@ def parse_question_structure(ocr_data: Dict) -> ParsedQuestion:
     for idx, line in enumerate(lines):
         m = opt_prefix_regex.match(line)
         if m:
-            raw_key = m.group(1) or m.group(2) or m.group(3) or m.group(4)
-            val = m.group(5).strip()
+            raw_key = m.group(1) or m.group(2) or m.group(3) or m.group(4) or m.group(5)
+            val = m.group(6).strip()
             # If line is parenthesized, preserve parentheses for Roman numerals or numbers if written as (i) or (1)
             if line.startswith("(") and (raw_key.lower() in ["i", "ii", "iii", "iv", "v", "x"] or raw_key.isdigit()):
                 key = f"({raw_key})"
@@ -252,7 +255,7 @@ def parse_question_structure(ocr_data: Dict) -> ParsedQuestion:
             else:
                 candidates.append({"line_idx": idx, "key": None, "raw_key": None, "val": line, "line": line, "is_text": True})
 
-    # Disambiguate leading question numbers (e.g. "3. Which of the following..." or "1. What is...")
+    # Disambiguate leading question numbers (e.g. "3. Which of the following..." or "1. What is..." or "15. Which...")
     option_entries = [c for c in candidates if c.get("key") is not None]
     if option_entries:
         first = option_entries[0]
@@ -264,10 +267,13 @@ def parse_question_structure(ocr_data: Dict) -> ParsedQuestion:
                 "calculate", "state", "select", "a company", "in python", "consider"
             ])
             or len(first["val"].split()) >= 6
+            or (first["key"] and first["key"].isdigit() and int(first["key"]) > 4)
         )
         if is_stem_like and len(option_entries) > 1:
             first["is_stem"] = True
             first["key"] = None
+            first["line"] = re.sub(r"^(?:Q\s*\d+[\.\:]|\d+\s*[\.\:]|Question\s*\d+[\.\:])\s*", "", first["line"], flags=re.IGNORECASE).strip()
+            first["val"] = re.sub(r"^(?:Q\s*\d+[\.\:]|\d+\s*[\.\:]|Question\s*\d+[\.\:])\s*", "", first["val"], flags=re.IGNORECASE).strip()
 
     non_stem_candidates = [c for c in candidates if not c.get("is_stem")]
     labeled_candidates = [c for c in non_stem_candidates if c.get("key") is not None]
