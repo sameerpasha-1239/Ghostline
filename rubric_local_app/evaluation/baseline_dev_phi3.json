@@ -1,0 +1,412 @@
+{
+  "dataset": "dev",
+  "model": "phi3:mini",
+  "total_questions": 30,
+  "total_correct": 0,
+  "accuracy_pct": 0.0,
+  "total_duration_sec": 0.003013134002685547,
+  "avg_latency_ms": 0.10043780008951823,
+  "category_metrics": {
+    "mcq_labelled": {
+      "total": 7,
+      "correct": 0,
+      "accuracy_pct": 0.0,
+      "avg_latency_ms": 0.1427446092878069,
+      "failure_count": 7
+    },
+    "mcq_unlabelled": {
+      "total": 4,
+      "correct": 0,
+      "accuracy_pct": 0.0,
+      "avg_latency_ms": 0.0,
+      "failure_count": 4
+    },
+    "true_false": {
+      "total": 3,
+      "correct": 0,
+      "accuracy_pct": 0.0,
+      "avg_latency_ms": 0.331878662109375,
+      "failure_count": 3
+    },
+    "numerical": {
+      "total": 4,
+      "correct": 0,
+      "accuracy_pct": 0.0,
+      "avg_latency_ms": 0.0,
+      "failure_count": 4
+    },
+    "programming": {
+      "total": 4,
+      "correct": 0,
+      "accuracy_pct": 0.0,
+      "avg_latency_ms": 0.25457143783569336,
+      "failure_count": 4
+    },
+    "theory": {
+      "total": 4,
+      "correct": 0,
+      "accuracy_pct": 0.0,
+      "avg_latency_ms": 0.0,
+      "failure_count": 4
+    },
+    "malformed_ocr": {
+      "total": 4,
+      "correct": 0,
+      "accuracy_pct": 0.0,
+      "avg_latency_ms": 0.0,
+      "failure_count": 4
+    }
+  },
+  "difficulty_metrics": {
+    "easy": {
+      "total": 9,
+      "correct": 0,
+      "accuracy_pct": 0.0,
+      "avg_latency_ms": 0.22416644626193577
+    },
+    "medium": {
+      "total": 13,
+      "correct": 0,
+      "accuracy_pct": 0.0,
+      "avg_latency_ms": 0.07658738356370193
+    },
+    "hard": {
+      "total": 8,
+      "correct": 0,
+      "accuracy_pct": 0.0,
+      "avg_latency_ms": 0.0
+    }
+  },
+  "failures": [
+    {
+      "id": "dev_mcq_01",
+      "category": "mcq_labelled",
+      "difficulty": "easy",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.9992122650146484,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_mcq_02",
+      "category": "mcq_labelled",
+      "difficulty": "easy",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_mcq_03",
+      "category": "mcq_labelled",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_mcq_04",
+      "category": "mcq_labelled",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_mcq_05",
+      "category": "mcq_labelled",
+      "difficulty": "hard",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_unlabel_01",
+      "category": "mcq_unlabelled",
+      "difficulty": "easy",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_unlabel_02",
+      "category": "mcq_unlabelled",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_unlabel_03",
+      "category": "mcq_unlabelled",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_unlabel_04",
+      "category": "mcq_unlabelled",
+      "difficulty": "hard",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_tf_01",
+      "category": "true_false",
+      "difficulty": "easy",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_tf_02",
+      "category": "true_false",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.995635986328125,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_tf_03",
+      "category": "true_false",
+      "difficulty": "hard",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_num_01",
+      "category": "numerical",
+      "difficulty": "easy",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_num_02",
+      "category": "numerical",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_num_03",
+      "category": "numerical",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_num_04",
+      "category": "numerical",
+      "difficulty": "hard",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_prog_01",
+      "category": "programming",
+      "difficulty": "easy",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 1.0182857513427734,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_prog_02",
+      "category": "programming",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_prog_03",
+      "category": "programming",
+      "difficulty": "hard",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_prog_04",
+      "category": "programming",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_theory_01",
+      "category": "theory",
+      "difficulty": "easy",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_theory_02",
+      "category": "theory",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_theory_03",
+      "category": "theory",
+      "difficulty": "hard",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_ocr_01",
+      "category": "malformed_ocr",
+      "difficulty": "easy",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_ocr_02",
+      "category": "malformed_ocr",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_ocr_03",
+      "category": "malformed_ocr",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_ocr_04",
+      "category": "malformed_ocr",
+      "difficulty": "hard",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_mcq_06",
+      "category": "mcq_labelled",
+      "difficulty": "medium",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_mcq_07",
+      "category": "mcq_labelled",
+      "difficulty": "hard",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    },
+    {
+      "id": "dev_theory_04",
+      "category": "theory",
+      "difficulty": "easy",
+      "is_correct": false,
+      "reason": "Exception: 'OllamaClient' object has no attribute 'process_question'",
+      "duration_ms": 0.0,
+      "badge": "?",
+      "proposed": null,
+      "validated": false
+    }
+  ]
+}
